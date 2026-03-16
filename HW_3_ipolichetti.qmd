@@ -1,0 +1,273 @@
+---
+title: "HW_3"
+author: "Isabella Polichetti"
+format: html
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+---
+
+# Categorical (Nominal)
+
+```{r}
+rm(list = ls()) # clean memory
+library(readxl)
+df <- read_excel("C:\\Users\\bella\\OneDrive\\UMass\\DACSS_690V\\HW_3\\ncesdata_MASS_202425.xlsx")
+```
+```{r}
+dim(df)
+```
+
+```{r}
+names(df)
+```
+```{r}
+table(unlist(sapply(df, class)))
+```
+```{r}
+head(df$Charter,20) #first twenty values
+```
+```{r}
+# absolute values
+absoluteT=table(df$Charter,
+                 useNA = "ifany") #include all values!
+#here you are:
+absoluteT
+```
+```{r}
+names(absoluteT)[is.na(names(absoluteT))] <- 'Unknown'
+```
+
+```{r}
+# relative values
+prop.table(absoluteT)
+```
+```{r}
+propT=prop.table(absoluteT)*100
+#you get:
+propT
+```
+```{r}
+# pie(absoluteT) # pies are not the first option.
+
+# as data frame
+(tableFreq=as.data.frame(absoluteT))
+```
+```{r}
+# renaming data frame columns
+names(tableFreq)=c("Charter","Count")
+# adding percents:
+tableFreq$Percent=as.vector(propT)
+# then, you have:
+tableFreq
+```
+```{r}
+library(ggplot2)
+```
+```{r}
+#base GGPLOT2 starts with a "base", telling WHAT VARIABLES TO PLOT
+base= ggplot(data = tableFreq, 
+             aes(x = Charter, # horizontal
+                 y = Count)) #vertical
+plot1 = base + geom_col()
+```
+```{r}
+plot1
+```
+```{r}
+titleText='Charter School Type?'
+sub_titleText='Massachusetts - 2024-2025'
+sourceText='National Center for Education Statistics'
+# are these obvious?
+x.AxisText="Locations"
+y.AxisText="Count"
+
+plot2 = plot1 + labs(title=titleText,
+                     subtitle = sub_titleText,
+                     x =NULL,  #x.AxisText
+                     y = NULL, #y.AxisText
+                     caption = sourceText) 
+plot2
+```
+```{r}
+base = ggplot(data = tableFreq,
+              aes(x = Charter,
+                  y = Percent))
+
+plot1 = base + geom_col(fill = "gray")
+
+plot2 = plot1 + labs(title = titleText,
+                     subtitle = sub_titleText,
+                     x = NULL,
+                     y = NULL,
+                     caption = sourceText)
+
+plot3 = plot2 + geom_hline(yintercept = 7,
+                           linetype = "dashed",
+                           linewidth = 1.5,
+                           alpha = 0.5)
+
+plot3
+```
+According to the national average, charter schools make up around 7% of all public schools in the US. That is why I made the reference line at 7%. That way, it is easy to compare the percent of charter schools in Massachusetts compared to the US average. 
+
+```{r}
+library(scales)
+plot4 = plot3 + scale_y_continuous(breaks = c(0, 7, 50, 100),
+                                   limits = c(0, 100),
+                                   labels = unit_format(suffix = '%'))
+plot4
+```
+
+```{r}
+plot5 = plot4 + theme(plot.caption = element_text(hjust = 0), 
+                      plot.title = element_text(hjust = 0.5))
+plot5
+```
+```{r}
+paste0(round(tableFreq$Percent,2), '%')
+```
+```{r}
+LABELS=paste0(round(tableFreq$Percent,2), '%')
+plot6 = plot5 + geom_text(vjust=1, 
+                          size = 3,
+                          aes(y = Percent ,
+                              label = LABELS))
+plot6
+```
+
+# Numerical 
+```{r}
+df$Teachers <- as.numeric(df$Teachers)
+summary(df$Teachers)
+```
+```{r}
+length(unique(df$Teachers))
+```
+
+```{r}
+# extract summary stats
+(statVals = summary(df$Teachers, digits = 3)[1:6])
+
+library(magrittr)
+statVals = statVals %>% as.vector()
+
+# standard deviation
+sd(df$Teachers, na.rm = TRUE)
+
+# median absolute deviation
+mad(df$Teachers, na.rm = TRUE)
+
+# coefficient of variation
+library(DescTools)
+CoefVar(df$Teachers, na.rm = TRUE)
+
+# asymmetry
+Skew(df$Teachers, na.rm = TRUE)
+
+# kurtosis
+Kurt(df$Teachers, na.rm = TRUE)
+
+# confidence interval for the mean
+MeanCI(df$Teachers, na.rm = TRUE)
+cv = CoefVar(df$Teachers, na.rm = TRUE)
+sd = SD(df$Teachers, na.rm = TRUE)
+md = Median(df$Teachers, na.rm = TRUE)
+mn = Mean(df$Teachers, na.rm = TRUE)
+mn.low = MeanCI(df$Teachers,
+                na.rm = TRUE)[['lwr.ci']]
+mn.up = MeanCI(df$Teachers,
+               na.rm = TRUE)[['upr.ci']]
+sk = Skew(df$Teachers, na.rm = TRUE) 
+```
+
+
+```{r}
+#plotting
+base= ggplot(df,aes(y = Teachers))  
+b1= base + 
+    geom_boxplot() +
+    scale_y_continuous(breaks = statVals) #custom breaks
+#then
+b1
+b1_flipped=b1 +coord_flip()
+b1_flipped
+```
+```{r}
+ggplot_build(b1)$data[[1]]
+(upperT=ggplot_build(b1)$data[[1]]$ymax)
+(numOutliers=sum(df$Teachers>upperT,na.rm = TRUE))
+```
+
+```{r}
+# text for annotations
+txtOutliers=paste0('Count of outlying schools: ',numOutliers)
+txtUpper=paste0('Threshold: ',upperT)
+
+
+b1_annotated = b1_flipped + geom_hline(yintercept = upperT,
+                            color='red',
+                            linetype="dotted",
+                            linewidth=2)  + 
+                          annotate(geom = 'text',
+                                label=txtUpper,
+                                y = upperT+5,
+                                x=0.2,
+                                angle=90)  + # text angle
+
+                          annotate(geom = 'text',
+                                label=txtOutliers,
+                                y = upperT+60,
+                                x=0.1,
+                                angle=0)
+b1_annotated
+```
+
+```{r}
+b1_annot_noX = b1_annotated + 
+                theme(axis.text.y = element_blank(),
+                      axis.ticks.y = element_blank(),
+                      axis.title.y = element_blank())
+b1_newGrid=b1_annot_noX +  theme(panel.grid = element_blank())
+b1_newGrid_axisText = b1_newGrid+ theme(axis.text.x = element_text(angle = 60,
+                                                                  size = 7,
+                                                                  vjust = 0.5))
+b1_newGrid_axisText
+```
+```{r}
+#ggplot
+barWIDTH=10 
+
+base= ggplot(df)  
+h1= base + geom_histogram(aes(x = Teachers),
+                          binwidth = barWIDTH,
+                          fill='black') 
+h1 = h1 + labs(y = "Number of Schools",
+               x = "Number of Teachers per School")# texts
+txtMean=paste0('Mean:',round(mn))
+txtSkew=paste0('Skewness:',round(sk,2))
+txtMedian=paste0('Median:',round(md,2))
+
+
+# adding
+h1_ann=h1+ geom_vline(xintercept = mn,color='red') + 
+    # about the mean
+    annotate(geom = 'text',color='red',
+             label=txtMean, 
+              y = 350,
+              x=mn+5,
+              angle=90) + 
+    # about the skewness
+    annotate(geom = 'text', color='blue',
+             label=txtSkew,
+              y = 30,
+              x=upperT+100,
+              angle=0) +
+    scale_x_continuous(limits = c(0, 250)) +
+    theme(panel.grid = element_blank())
+
+h1_ann    
+library(patchwork)
+h1_ann/b1_newGrid_axisText
+```
+
