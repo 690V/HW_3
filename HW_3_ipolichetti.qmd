@@ -5,6 +5,8 @@ format: html
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
+output-file: index
+
 ---
 
 # Categorical (Nominal)
